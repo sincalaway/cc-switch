@@ -5286,7 +5286,8 @@
       "pendingNote": "터미널에서 agy를 열었습니다. 로그인되어 있지 않으면 안내에 따라 로그인하고, 로그인되어 있으면 /logout 후 /login으로 추가할 계정에 로그인하세요. 완료되면 여기에 자동으로 추가됩니다.",
       "reopenTerminal": "터미널 다시 열기",
       "quotaNotCurrent": "이 계정으로 전환해야 사용량을 조회할 수 있습니다",
-      "quotaRefreshNotCurrent": "agy는 현재 로그인된 계정의 사용량만 조회할 수 있습니다. 여기에는 전환하기 전에 마지막으로 조회한 값이 표시됩니다. 이 계정으로 전환한 뒤 새로고침하세요."
+      "quotaRefreshNotCurrent": "agy는 현재 로그인된 계정의 사용량만 조회할 수 있습니다. 여기에는 전환하기 전에 마지막으로 조회한 값이 표시됩니다. 이 계정으로 전환한 뒤 새로고침하세요.",
+      "quotaRefreshDisabledHint": "이 계정으로 전환해야 최신 사용량을 조회할 수 있습니다"
     },
     "codebuddy": {
       "mainland": "중국",

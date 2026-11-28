@@ -5286,7 +5286,8 @@
       "pendingNote": "已在終端機開啟 agy。未登入時依提示登入；已登入時先輸入 /logout，再輸入 /login 登入要新增的帳號。完成後這裡會自動收錄。",
       "reopenTerminal": "重新開啟終端機",
       "quotaNotCurrent": "切換到這個帳號後才能查詢額度",
-      "quotaRefreshNotCurrent": "agy 只能查詢目前登入帳號的額度，這裡顯示的是切走前最後一次查到的。切換到這個帳號後再重新整理。"
+      "quotaRefreshNotCurrent": "agy 只能查詢目前登入帳號的額度，這裡顯示的是切走前最後一次查到的。切換到這個帳號後再重新整理。",
+      "quotaRefreshDisabledHint": "切換到這個帳號後才能查詢最新額度"
     },
     "codebuddy": {
       "mainland": "國內版",

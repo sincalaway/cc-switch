@@ -8,9 +8,13 @@ import type { CodexLoginMethod, ManagedLoginMethod } from "@/lib/api/auth";
 import { deliverLoginLink, readAuthOpenBrowser } from "@/lib/authLoginLink";
 import { copyText } from "@/lib/clipboard";
 import {
+  agyAuthStatusQuery,
   invalidateAgyLoginCaches,
+  invalidateAgyQuotaCaches,
   subscriptionKeys,
+  syncAgyLoginOnWindowFocus,
 } from "@/lib/query/subscription";
+import { subscribeWindowFocus } from "@/lib/windowActivity";
 import type {
   ManagedAuthAccount,
   ManagedAuthProvider,
@@ -66,6 +70,10 @@ export function useManagedAuth(
     queryKey,
     queryFn: () => authApi.authGetStatus(authProvider),
     staleTime: 30000,
+    // agy 的登录可能在外部终端被 /logout、/login 换掉：回到窗口时重读钥匙串同步「agy 在用」徽标。
+    ...(authProvider === "agy_oauth"
+      ? { refetchOnWindowFocus: agyAuthStatusQuery.refetchOnWindowFocus }
+      : {}),
     // A rejected xAI refresh token is persisted as `requires_reauth` by the
     // proxy hot path. Periodically refresh local status so an already-open Auth
     // Center stops showing the account as logged in without requiring a reload.
@@ -136,6 +144,14 @@ export function useManagedAuth(
     },
     [cancelBackendFlow],
   );
+
+  useEffect(() => {
+    if (authProvider !== "agy_oauth") return;
+    // windowActivity 仅在隐藏/最小化时切换 focusManager，从外部终端切回可见窗口时需显式监听窗口焦点。
+    return subscribeWindowFocus(() => {
+      void syncAgyLoginOnWindowFocus(queryClient);
+    });
+  }, [authProvider, queryClient]);
 
   useEffect(() => {
     return () => {
@@ -226,9 +242,19 @@ export function useManagedAuth(
             flowGenerationRef.current += 1;
             const completionGeneration = flowGenerationRef.current;
             setPollingState("success");
-            await refetchStatus();
+            const refreshedStatus = await refetchStatus();
             await queryClient.invalidateQueries({ queryKey });
             if (completionGeneration !== flowGenerationRef.current) return;
+            if (authProvider === "agy_oauth") {
+              const nextStatus =
+                refreshedStatus.data ??
+                queryClient.getQueryData<ManagedAuthStatus>(queryKey);
+              await invalidateAgyQuotaCaches(
+                queryClient,
+                nextStatus?.default_account_id ?? null,
+              );
+              if (completionGeneration !== flowGenerationRef.current) return;
+            }
             onLoginCompleteRef.current?.(newAccount);
             setPollingState("idle");
             setDeviceCode(null);

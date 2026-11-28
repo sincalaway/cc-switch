@@ -5215,7 +5215,8 @@
       "pendingNote": "agy bir terminalde açıldı. Oturum açık değilse yönergeleri izleyin; açıksa önce /logout, ardından eklenecek hesapla /login yazın. Tamamlandığında buraya otomatik olarak eklenir.",
       "reopenTerminal": "Terminali yeniden aç",
       "quotaNotCurrent": "Kotasını görmek için bu hesaba geçin",
-      "quotaRefreshNotCurrent": "agy yalnızca oturum açık olan hesabın kotasını sorgulayabilir. Burada, başka hesaba geçmeden önce en son sorgulanan değer gösterilir. Bu hesaba geçip ardından yenileyin."
+      "quotaRefreshNotCurrent": "agy yalnızca oturum açık olan hesabın kotasını sorgulayabilir. Burada, başka hesaba geçmeden önce en son sorgulanan değer gösterilir. Bu hesaba geçip ardından yenileyin.",
+      "quotaRefreshDisabledHint": "Güncel kotasını görmek için bu hesaba geçin"
     },
     "codebuddy": {
       "mainland": "Çin",

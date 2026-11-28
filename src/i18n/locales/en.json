@@ -5286,7 +5286,8 @@
       "pendingNote": "agy is open in a terminal. If it isn't signed in, follow its prompts; if it is, type /logout, then /login with the account to add. It's added here automatically once done.",
       "reopenTerminal": "Reopen terminal",
       "quotaNotCurrent": "Switch to this account to check its quota",
-      "quotaRefreshNotCurrent": "agy can only check the quota of the account it's signed in with. This shows the last quota checked before you switched away. Switch to this account, then refresh."
+      "quotaRefreshNotCurrent": "agy can only check the quota of the account it's signed in with. This shows the last quota checked before you switched away. Switch to this account, then refresh.",
+      "quotaRefreshDisabledHint": "Switch to this account to check its latest quota"
     },
     "codebuddy": {
       "mainland": "China",

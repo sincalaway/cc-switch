@@ -4,7 +4,6 @@ import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { HoverTip } from "@/components/ui/hover-tip";
-import { toast } from "@/lib/toast";
 import {
   ResetSlot,
   TONE_FILL,
@@ -35,6 +34,7 @@ import type { CodebuddyQuota } from "@/lib/api/auth";
 import { useCopilotQuota } from "@/lib/query/copilot";
 import { copilotQuotaRows } from "@/components/CopilotQuotaFooter";
 import {
+  useAgyAccountLastQuota,
   useAgyAccountQuota,
   useCodebuddyAccountQuota,
   useClaudeAccountQuota,
@@ -72,7 +72,9 @@ interface AccountQuotaColumnProps {
   onRefresh: () => void;
   /** 只手动查询、还没查过：写一句「点刷新查询额度」，留着 ↻ */
   idle?: boolean;
-  /** ↻ 的悬停提示，默认「刷新额度」；刷新查不到新结果的号（agy 非当前号）写明原因 */
+  /** 禁用右侧 ↻ 刷新按钮但保留占位，维持列对齐 */
+  refreshDisabled?: boolean;
+  /** 覆盖 ↻ 的悬停提示（如非当前账号说明为什么不能刷新） */
   refreshHint?: string;
 }
 
@@ -91,6 +93,7 @@ export function AccountQuotaColumn({
   loading,
   onRefresh,
   idle = false,
+  refreshDisabled = false,
   refreshHint,
 }: AccountQuotaColumnProps) {
   const { t } = useTranslation();
@@ -177,6 +180,7 @@ export function AccountQuotaColumn({
         queriedAt={queriedAt}
         loading={loading}
         onRefresh={onRefresh}
+        disabled={refreshDisabled}
         hint={refreshHint}
       />
     </>
@@ -189,7 +193,9 @@ interface QuotaRefreshCellProps {
   queriedAt?: number | null;
   loading: boolean;
   onRefresh: () => void;
-  /** 悬停提示，默认「刷新额度」 */
+  /** 禁用刷新按钮但保留占位与悬停提示 */
+  disabled?: boolean;
+  /** 覆盖刷新按钮的悬停提示，默认「刷新额度」 */
   hint?: string;
 }
 
@@ -202,12 +208,14 @@ export function QuotaRefreshCell({
   queriedAt,
   loading,
   onRefresh,
+  disabled = false,
   hint,
 }: QuotaRefreshCellProps) {
   const { t } = useTranslation();
   const now = useNow(Boolean(queriedAt));
   const agoId = useId();
   const ago = queriedAt ? formatRelativeTime(queriedAt, now, t) : "";
+  const isDisabled = loading || disabled;
 
   return (
     // 刷新中不换文字（只转圈），格子宽度只随「x 分钟前」变；最小宽度放得下中日文最长的
@@ -225,13 +233,13 @@ export function QuotaRefreshCell({
             defaultValue: "刷新 {{login}} 的额度",
             login,
           })}
-          aria-disabled={loading}
+          aria-disabled={isDisabled}
           aria-busy={loading}
           aria-describedby={ago ? agoId : undefined}
           onClick={() => {
-            if (!loading) onRefresh();
+            if (!isDisabled) onRefresh();
           }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-fg-2 transition-colors hover:bg-subtle hover:text-fg-1 aria-disabled:opacity-45 aria-disabled:hover:bg-transparent"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-fg-2 transition-colors hover:bg-subtle hover:text-fg-1 aria-disabled:cursor-not-allowed aria-disabled:opacity-45 aria-disabled:hover:bg-transparent aria-disabled:hover:text-fg-2"
         >
           <RefreshCw
             className={cn(
@@ -480,9 +488,9 @@ export function KimiAccountQuota({
 }
 
 /**
- * Antigravity 账号的剩余额度（agy_account_quota(accountId)）。只有 agy 当前登着的号查得到，
- * 别的号显示切走前最后一次查到的；从没查到过时提示切过去才能查。别的号点 ↻ 只会读回
- * 同一份旧结果（看着只闪一下），所以悬停提示和点击后的提示都写明只能查当前登着的号。
+ * Antigravity 账号的剩余额度：只有 agy 当前登着的号能经 `/usage` 实时刷新；
+ * 其他号纯本地只读切走前保存的 `last_quota` 快照（不读钥匙串、不起 agy），
+ * 右侧 ↻ 置灰禁用，从没查到过时提示切过去才能查。
  */
 export function AgyAccountQuota({
   accountId,
@@ -493,6 +501,19 @@ export function AgyAccountQuota({
   login: string;
   isCurrent: boolean;
 }) {
+  if (!isCurrent) {
+    return <NonCurrentAgyAccountQuota accountId={accountId} login={login} />;
+  }
+  return <CurrentAgyAccountQuota accountId={accountId} login={login} />;
+}
+
+function CurrentAgyAccountQuota({
+  accountId,
+  login,
+}: {
+  accountId: string;
+  login: string;
+}) {
   const { t, i18n } = useTranslation();
   const display = useQuotaDisplay();
   const {
@@ -501,24 +522,41 @@ export function AgyAccountQuota({
     refetch,
     manualIdle,
   } = useAgyAccountQuota(accountId, { enabled: true, autoQuery: false });
+  return (
+    <AccountQuotaColumn
+      login={login}
+      state={subscriptionQuotaState(t, quota, loading, i18n.language, display)}
+      queriedAt={quota?.queriedAt ?? null}
+      loading={loading}
+      onRefresh={() => void refetch()}
+      idle={manualIdle}
+    />
+  );
+}
+
+function NonCurrentAgyAccountQuota({
+  accountId,
+  login,
+}: {
+  accountId: string;
+  login: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const display = useQuotaDisplay();
+  const { data: quota, isPending } = useAgyAccountLastQuota(accountId);
+  const snapshot = quota?.success ? quota : undefined;
   const state = subscriptionQuotaState(
     t,
-    quota,
-    loading,
+    snapshot,
+    false,
     i18n.language,
     display,
   );
-  const notCurrentHint = isCurrent
-    ? undefined
-    : t("authCenter.agy.quotaRefreshNotCurrent", {
-        defaultValue:
-          "agy 只能查当前登着的号的额度，这里显示的是切走前最后一次查到的。切到这个号后再刷新。",
-      });
   return (
     <AccountQuotaColumn
       login={login}
       state={
-        !state && !isCurrent && !loading && quota
+        !state && !isPending
           ? {
               kind: "note",
               text: t("authCenter.agy.quotaNotCurrent", {
@@ -527,15 +565,13 @@ export function AgyAccountQuota({
             }
           : state
       }
-      queriedAt={quota?.queriedAt ?? null}
-      loading={loading}
-      onRefresh={() => {
-        // 手动查询模式下第一次点仍要读回切走前的结果，所以照常查，只是另外说明
-        void refetch();
-        if (notCurrentHint) toast.info(notCurrentHint);
-      }}
-      refreshHint={notCurrentHint}
-      idle={manualIdle}
+      queriedAt={state ? (snapshot?.queriedAt ?? null) : null}
+      loading={false}
+      onRefresh={() => {}}
+      refreshDisabled
+      refreshHint={t("authCenter.agy.quotaRefreshDisabledHint", {
+        defaultValue: "切到这个号后才能查最新额度",
+      })}
     />
   );
 }
